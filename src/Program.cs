@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
 using System.Text;
+
 namespace RewstRemoteAgent
 {
     internal class Program
@@ -25,16 +26,15 @@ namespace RewstRemoteAgent
             var verifier = new ChecksumVerifier(logger, httpClient);
 
             Logger.SetupLogging("YourAppName");
-            // Anywhere in your application
             Logger.LogInfo("This is an informational message");
             Logger.LogError("An error occurred: " + exception.Message);
 
-            // To install a service
-            ServiceManager.InstallService("your_org_id");
-            // To start a service
-            ServiceManager.StartService("your_org_id");
-            // To check service status
-            ServiceManager.CheckServiceStatus("your_org_id");
+            
+            ServiceManager.InstallService("your_org_id");  // To install a service
+            
+            ServiceManager.StartService("your_org_id");  // To start a service
+            
+            ServiceManager.CheckServiceStatus("your_org_id");  // To check service status
 
             var isValid = await verifier.IsChecksumValidAsync("path/to/your/executable");
             Console.WriteLine($"Is checksum valid: {isValid}");
