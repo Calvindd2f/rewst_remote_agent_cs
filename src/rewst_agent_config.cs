@@ -6,345 +6,345 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
 
 namespace Rewst.RemoteAgent
 {
-    private static string Os_type()
+    public static class RewstAgentConfig
     {
-        var platform = Environment.OSVersion.Platform;
-        return platform.ToString().ToLower();
-    }
+        private static readonly ILogger<RewstAgentConfig> Logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<RewstAgentConfig>();
 
-    private var OsType = os_type();
-    public static void OutputEnvironmentInfo()
-    {
-        string osInfo = Environment.OSVersion.ToString();
-        Debug.WriteLine($"Running on {osInfo}");
-
-        string versionString = $"v{Assembly.GetExecutingAssembly().GetName().Version}";
-        Debug.WriteLine("Rewst Agent Configuration Tool " + versionString);
-    };
-
-
-    public static bool IsValidUrl(string url)
-    {
-        try
+        private static string OsType()
         {
-            var result = new Uri(url);
-            return !string.IsNullOrEmpty(result.Scheme) && !string.IsNullOrEmpty(result.Host);
+            var platform = Environment.OSVersion.Platform;
+            return platform.ToString().ToLower();
         }
-        catch (UriFormatException)
-        {
-            Debug.WriteLine($"The provided string {url} is not a valid URL");
-            return false;
-        }
-    };
 
-    public static bool IsBase64(string sb)
-    {
-        try
+        private static readonly string OsType = OsType();
+
+        public static void OutputEnvironmentInfo()
         {
-            if (!string.IsNullOrEmpty(sb))
+            string osInfo = Environment.OSVersion.ToString();
+            Logger.LogInformation($"Running on {osInfo}");
+
+            string versionString = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}";
+            Logger.LogInformation("Rewst Agent Configuration Tool " + versionString);
+        }
+
+        public static bool IsValidUrl(string url)
+        {
+            try
             {
-                sb = sb.Trim();
+                var result = new Uri(url);
+                return !string.IsNullOrEmpty(result.Scheme) && !string.IsNullOrEmpty(result.Host);
             }
-            return Regex.IsMatch(sb, "^[A-Za-z0-9+/]+={0,2}$");
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return false;
-        }
-    };
-
-    public static async Task RemoveOldFiles(string orgId)
-    {
-        string serviceManagerPath = GetServiceManagerPath(orgId);
-        string agentExecutablePath = GetAgentExecutablePath(orgId);
-        List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
-
-        if (osType == "win32")
-        {
-            string serviceExecutablePath = GetServiceExecutablePath(orgId);
-            filePaths.Add(serviceExecutablePath);
-        }
-
-        foreach (var filePath in filePaths)
-        {
-            if (File.Exists(filePath))
+            catch (UriFormatException)
             {
-                string newFilePath = $"{filePath}_oldver";
-                try
-                {
-                    if (File.Exists(newFilePath))
-                    {
-                        File.Delete(newFilePath);
-                    }
-                    File.Move(filePath, newFilePath);
-                    Console.WriteLine($"Renamed {filePath} to {newFilePath}");
-                }
-                catch (IOException e)
-                {
-                    Console.WriteLine($"Error renaming file {filePath}: {e.Message}");
-                }
+                Logger.LogError($"The provided string {url} is not a valid URL");
+                return false;
             }
         }
-    }
 
-    public static async Task<bool> WaitForFiles(string orgId, int timeout = 3600)
-    {
-        Console.WriteLine("Waiting for files to be written...");
-        string serviceManagerPath = GetServiceManagerPath(orgId);
-        Console.WriteLine($"Awaiting Service Manager File: {serviceManagerPath} ...");
-
-        string agentExecutablePath = GetAgentExecutablePath(orgId);
-        Console.WriteLine($"Awaiting Agent Service File: {agentExecutablePath} ...");
-
-        List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
-
-        if (osType == "win32")
+        public static bool IsBase64(string sb)
         {
-            string serviceExecutablePath = GetServiceExecutablePath(orgId);
-            Console.WriteLine($"Awaiting Service Executable File: {serviceExecutablePath} ...");
-            filePaths.Add(serviceExecutablePath);
+            try
+            {
+                if (!string.IsNullOrEmpty(sb))
+                {
+                    sb = sb.Trim();
+                }
+                return Regex.IsMatch(sb, "^[A-Za-z0-9+/]+={0,2}$");
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "Error checking if string is Base64");
+                return false;
+            }
         }
 
-        DateTime startTime = DateTime.Now;
-
-        while (true)
+        public static async Task RemoveOldFiles(string orgId)
         {
-            bool allFilesExist = true;
+            string serviceManagerPath = GetServiceManagerPath(orgId);
+            string agentExecutablePath = GetAgentExecutablePath(orgId);
+            List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
+
+            if (OsType == "win32")
+            {
+                string serviceExecutablePath = GetServiceExecutablePath(orgId);
+                filePaths.Add(serviceExecutablePath);
+            }
+
             foreach (var filePath in filePaths)
             {
-                if (!File.Exists(filePath))
+                if (File.Exists(filePath))
                 {
-                    allFilesExist = false;
-                    break;
+                    string newFilePath = $"{filePath}_oldver";
+                    try
+                    {
+                        if (File.Exists(newFilePath))
+                        {
+                            File.Delete(newFilePath);
+                        }
+                        File.Move(filePath, newFilePath);
+                        Logger.LogInformation($"Renamed {filePath} to {newFilePath}");
+                    }
+                    catch (IOException e)
+                    {
+                        Logger.LogError(e, $"Error renaming file {filePath}");
+                    }
                 }
             }
+        }
 
-            if (allFilesExist)
+        public static async Task<bool> WaitForFiles(string orgId, int timeout = 3600)
+        {
+            Logger.LogInformation("Waiting for files to be written...");
+            string serviceManagerPath = GetServiceManagerPath(orgId);
+            Logger.LogInformation($"Awaiting Service Manager File: {serviceManagerPath} ...");
+
+            string agentExecutablePath = GetAgentExecutablePath(orgId);
+            Logger.LogInformation($"Awaiting Agent Service File: {agentExecutablePath} ...");
+
+            List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
+
+            if (OsType == "win32")
             {
-                await Task.Delay(20000);
-                Console.WriteLine("All files have been written.");
-                return true;
+                string serviceExecutablePath = GetServiceExecutablePath(orgId);
+                Logger.LogInformation($"Awaiting Service Executable File: {serviceExecutablePath} ...");
+                filePaths.Add(serviceExecutablePath);
             }
 
-            if ((DateTime.Now - startTime).TotalSeconds > timeout)
+            DateTime startTime = DateTime.Now;
+
+            while (true)
             {
-                Console.WriteLine("Timeout reached while waiting for files.");
+                bool allFilesExist = true;
+                foreach (var filePath in filePaths)
+                {
+                    if (!File.Exists(filePath))
+                    {
+                        allFilesExist = false;
+                        break;
+                    }
+                }
+
+                if (allFilesExist)
+                {
+                    await Task.Delay(20000);
+                    Logger.LogInformation("All files have been written.");
+                    return true;
+                }
+
+                if ((DateTime.Now - startTime).TotalSeconds > timeout)
+                {
+                    Logger.LogError("Timeout reached while waiting for files.");
+                    return false;
+                }
+
+                await Task.Delay(5000);
+            }
+        }
+
+        public static async Task<bool> InstallAndStartService(string orgId)
+        {
+            string serviceManagerPath = GetServiceManagerPath(orgId);
+
+            var installCommand = new ProcessStartInfo
+            {
+                FileName = serviceManagerPath,
+                Arguments = $"--org-id {orgId} --install",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            try
+            {
+                using (var process = Process.Start(installCommand))
+                {
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    var error = await process.StandardError.ReadToEndAsync();
+                    await process.WaitForExitAsync();
+
+                    if (process.ExitCode == 0)
+                    {
+                        Logger.LogInformation("Service installed successfully.");
+                    }
+                    else
+                    {
+                        Logger.LogError($"Failed to install the service: {error}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "Failed to install the service");
                 return false;
             }
 
-            await Task.Delay(5000);
-        }
-    }
-
-    public static async Task<bool> InstallAndStartService(string orgId)
-    {
-        string serviceManagerPath = GetServiceManagerPath(orgId);
-
-        var installCommand = new ProcessStartInfo
-        {
-            FileName = serviceManagerPath,
-            Arguments = $"--org-id {orgId} --install",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        try
-        {
-            using (var process = Process.Start(installCommand))
+            var startCommand = new ProcessStartInfo
             {
-                var output = await process.StandardOutput.ReadToEndAsync();
-                var error = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                FileName = serviceManagerPath,
+                Arguments = $"--org-id {orgId} --start",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
 
-                if (process.ExitCode == 0)
+            try
+            {
+                using (var process = Process.Start(startCommand))
                 {
-                    Console.WriteLine("Service installed successfully.");
-                }
-                else
-                {
-                    Console.WriteLine($"Failed to install the service: {error}");
-                    return false;
+                    await process.WaitForExitAsync();
+                    if (process.ExitCode == 0)
+                    {
+                        Logger.LogInformation("Service started successfully.");
+                    }
+                    else
+                    {
+                        Logger.LogError("Failed to start the service.");
+                        return false;
+                    }
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Failed to install the service: {e.Message}");
-            return false;
-        }
-
-        var startCommand = new ProcessStartInfo
-        {
-            FileName = serviceManagerPath,
-            Arguments = $"--org-id {orgId} --start",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        try
-        {
-            using (var process = Process.Start(startCommand))
+            catch (Exception e)
             {
-                await process.WaitForExitAsync();
-                if (process.ExitCode == 0)
+                Logger.LogError(e, "Failed to start the service");
+                return false;
+            }
+
+            return true;
+        }
+
+        public static async Task<bool> CheckServiceStatus(string orgId)
+        {
+            string serviceManagerPath = GetServiceManagerPath(orgId);
+
+            var statusCommand = new ProcessStartInfo
+            {
+                FileName = serviceManagerPath,
+                Arguments = $"--org-id {orgId} --status",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            try
+            {
+                using (var process = Process.Start(statusCommand))
                 {
-                    Console.WriteLine("Service started successfully.");
-                }
-                else
-                {
-                    Console.WriteLine("Failed to start the service.");
-                    return false;
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    await process.WaitForExitAsync();
+
+                    Logger.LogInformation($"Service status: {output}");
+                    return output.ToLower().Contains("running");
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Failed to start the service: {e.Message}");
-            return false;
-        }
-
-        return true;
-    }
-
-    public static async Task<bool> CheckServiceStatus(string orgId)
-    {
-        string serviceManagerPath = GetServiceManagerPath(orgId);
-
-        var statusCommand = new ProcessStartInfo
-        {
-            FileName = serviceManagerPath,
-            Arguments = $"--org-id {orgId} --status",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        try
-        {
-            using (var process = Process.Start(statusCommand))
+            catch (Exception e)
             {
-                var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-
-                Console.WriteLine($"Service status: {output}");
-                return output.ToLower().Contains("running");
+                Logger.LogError(e, "Failed to check the service status");
+                return false;
             }
         }
-        catch (Exception e)
+
+        public static void EndProgram(int exitLevel = 1)
         {
-            Console.WriteLine($"Failed to check the service status: {e.Message}");
-            return false;
-        }
-    }
-
-    public static void EndProgram(int exitLevel = 1)
-    {
-        Console.WriteLine($"Agent configuration is exiting with exit level {exitLevel}.");
-        Environment.Exit(exitLevel);
-    }
-
-    public static async Task Main(string[] args)
-    {
-        string configUrl = null;
-        string configSecret = null;
-        string orgId = null;
-
-        foreach (var arg in args)
-        {
-            if (arg.StartsWith("--config-url="))
-                configUrl = arg.Substring("--config-url=".Length);
-            else if (arg.StartsWith("--config-secret="))
-                configSecret = arg.Substring("--config-secret=".Length);
-            else if (arg.StartsWith("--org-id="))
-                orgId = arg.Substring("--org-id=".Length);
+            Logger.LogInformation($"Agent configuration is exiting with exit level {exitLevel}.");
+            Environment.Exit(exitLevel);
         }
 
-        OutputEnvironmentInfo();
+        public static async Task Main(string[] args)
+        {
+            string configUrl = null;
+            string configSecret = null;
+            string orgId = null;
 
-        if (!IsValidUrl(configUrl))
-        {
-            Console.WriteLine("The config URL provided is not valid.");
-            EndProgram(1);
-        }
-        if (!IsBase64(configSecret))
-        {
-            Console.WriteLine("The config secret provided is not a valid base64 string.");
-            EndProgram(1);
-        }
-
-        try
-        {
-            if (
-                string.IsNullOrEmpty(configUrl)
-                || string.IsNullOrEmpty(configSecret)
-                || string.IsNullOrEmpty(orgId)
-            )
+            foreach (var arg in args)
             {
-                Console.WriteLine("Error: Missing required parameters.");
-                Console.WriteLine(
-                    "Please make sure '--config-url', '--org-id' and '--config-secret' are provided."
-                );
+                if (arg.StartsWith("--config-url="))
+                    configUrl = arg.Substring("--config-url=".Length);
+                else if (arg.StartsWith("--config-secret="))
+                    configSecret = arg.Substring("--config-secret=".Length);
+                else if (arg.StartsWith("--org-id="))
+                    orgId = arg.Substring("--org-id=".Length);
+            }
+
+            OutputEnvironmentInfo();
+
+            if (!IsValidUrl(configUrl))
+            {
+                Logger.LogError("The config URL provided is not valid.");
+                EndProgram(1);
+            }
+            if (!IsBase64(configSecret))
+            {
+                Logger.LogError("The config secret provided is not a valid base64 string.");
                 EndProgram(1);
             }
 
-            Console.WriteLine("Fetching configuration from Rewst...");
-            var urlOrgId = configUrl.Split('/').Last();
-            var configData = await FetchConfiguration(configUrl, configSecret, orgId);
-            if (configData == null)
+            try
             {
-                Console.WriteLine("Failed to fetch configuration.");
-                EndProgram(2);
+                if (
+                    string.IsNullOrEmpty(configUrl)
+                    || string.IsNullOrEmpty(configSecret)
+                    || string.IsNullOrEmpty(orgId)
+                )
+                {
+                    Logger.LogError("Error: Missing required parameters.");
+                    Logger.LogError(
+                        "Please make sure '--config-url', '--org-id' and '--config-secret' are provided."
+                    );
+                    EndProgram(1);
+                }
+
+                Logger.LogInformation("Fetching configuration from Rewst...");
+                var urlOrgId = configUrl.Split('/').Last();
+                var configData = await FetchConfiguration(configUrl, configSecret, orgId);
+                if (configData == null)
+                {
+                    Logger.LogError("Failed to fetch configuration.");
+                    EndProgram(2);
+                }
+
+                Logger.LogInformation("Saving configuration to file...");
+                SaveConfiguration(configData);
+
+                Logger.LogInformation($"Configuration: {JsonSerializer.Serialize(configData)}");
+
+                orgId = configData["rewst_org_id"].ToString();
+                Logger.LogInformation($"Organization ID: {orgId}");
+
+                var connectionManager = new ConnectionManager(configData);
+
+                Logger.LogInformation("Connecting to IoT Hub...");
+                await connectionManager.Connect();
+
+                Logger.LogInformation("Setting up message handler...");
+                await connectionManager.SetMessageHandler();
+
+                await RemoveOldFiles(orgId);
+
+                await WaitForFiles(orgId);
+
+                Logger.LogInformation("Disconnecting from IoT Hub...");
+                await connectionManager.Disconnect();
+                await Task.Delay(4000);
+                Logger.LogInformation("Disconnected from IoT Hub.");
+
+                while (!await CheckServiceStatus(orgId))
+                {
+                    Logger.LogInformation("Waiting for the service to start...");
+                    await Task.Delay(5000);
+                }
+
+                EndProgram(0);
             }
-
-            Console.WriteLine("Saving configuration to file...");
-            SaveConfiguration(configData);
-
-            Console.WriteLine($"Configuration: {JsonSerializer.Serialize(configData)}");
-
-            orgId = configData["rewst_org_id"].ToString();
-            Console.WriteLine($"Organization ID: {orgId}");
-
-            var connectionManager = new ConnectionManager(configData);
-
-            Console.WriteLine("Connecting to IoT Hub...");
-            await connectionManager.Connect();
-
-            Console.WriteLine("Setting up message handler...");
-            await connectionManager.SetMessageHandler();
-
-            await RemoveOldFiles(orgId);
-
-            await WaitForFiles(orgId);
-
-            Console.WriteLine("Disconnecting from IoT Hub...");
-            await connectionManager.Disconnect();
-            await Task.Delay(4000);
-            Console.WriteLine("Disconnected from IoT Hub.");
-
-            while (!await CheckServiceStatus(orgId))
+            catch (Exception e)
             {
-                Console.WriteLine("Waiting for the service to start...");
-                await Task.Delay(5000);
+                Logger.LogError(e, "An error occurred");
             }
-
-            EndProgram(0);
         }
-        catch (Exception e)
-        {
-            Console.WriteLine($"An error occurred: {e.Message}");
-        }
-    }
-
-    public static void Main(string[] args)
-    {
-        Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
     }
 }
