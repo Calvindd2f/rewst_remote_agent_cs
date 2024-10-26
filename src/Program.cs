@@ -1,15 +1,14 @@
-using System;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
 using System.Text;
+using Rewst.RemoteAgent.Service;
+using Rewst.RemoteAgent.IOIHUB;
+using Rewst.Log;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent
 {
     internal class Program
     {
@@ -29,12 +28,12 @@ namespace RewstRemoteAgent
             Logger.LogInfo("This is an informational message");
             Logger.LogError("An error occurred: " + exception.Message);
 
-            
-            ServiceManager.InstallService("your_org_id");  // To install a service
-            
-            ServiceManager.StartService("your_org_id");  // To start a service
-            
-            ServiceManager.CheckServiceStatus("your_org_id");  // To check service status
+
+            ServiceManager.InstallService("your_org_id");
+
+            ServiceManager.StartService("your_org_id");
+
+            ServiceManager.CheckServiceStatus("your_org_id");
 
             var isValid = await verifier.IsChecksumValidAsync("path/to/your/executable");
             Console.WriteLine($"Is checksum valid: {isValid}");
@@ -197,7 +196,7 @@ namespace RewstRemoteAgent
 
     public class Config
     {
-        public string RewstOrgId { get; set; }
+        public string? RewstOrgId { get; set; }
     }
 
     public class ConnectionManager

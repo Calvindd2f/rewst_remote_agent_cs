@@ -1,12 +1,8 @@
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
-using System.ServiceProcess;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Rewst.RemoteAgent
+namespace Rewst.RemoteAgent.Service
 {
     public interface IServiceManager
     {

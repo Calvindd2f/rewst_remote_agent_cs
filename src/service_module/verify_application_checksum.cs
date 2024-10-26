@@ -1,25 +1,26 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.Service
 {
     public class ChecksumVerifier
     {
         private readonly ILogger<ChecksumVerifier> _logger;
         private readonly HttpClient _httpClient;
+        private HttpClient httpClient;
         private const string Version = "1.0.0"; // Replace with your actual version
 
         public ChecksumVerifier(ILogger<ChecksumVerifier> logger, HttpClient httpClient)
         {
             _logger = logger;
             _httpClient = httpClient;
+        }
+
+        public ChecksumVerifier(HttpClient httpClient)
+        {
+            this.httpClient = httpClient;
         }
 
         public async Task<bool> IsChecksumValidAsync(string executablePath)

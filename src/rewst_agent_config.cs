@@ -1,18 +1,14 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Rewst.Log;
 
 namespace Rewst.RemoteAgent
 {
     public static class RewstAgentConfig
     {
-        private static readonly ILogger<RewstAgentConfig> Logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<RewstAgentConfig>();
+        //private static readonly ILogger<RewstAgentConfig> Logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<RewstAgentConfig>();
 
         private static string OsType()
         {
@@ -20,7 +16,7 @@ namespace Rewst.RemoteAgent
             return platform.ToString().ToLower();
         }
 
-        private static readonly string OsType = OsType();
+        //private static readonly string OsType = OsType();
 
         public static void OutputEnvironmentInfo()
         {
@@ -66,7 +62,7 @@ namespace Rewst.RemoteAgent
         {
             string serviceManagerPath = GetServiceManagerPath(orgId);
             string agentExecutablePath = GetAgentExecutablePath(orgId);
-            List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
+            List<string> filePaths = [serviceManagerPath, agentExecutablePath];
 
             if (OsType == "win32")
             {
@@ -105,7 +101,7 @@ namespace Rewst.RemoteAgent
             string agentExecutablePath = GetAgentExecutablePath(orgId);
             Logger.LogInformation($"Awaiting Agent Service File: {agentExecutablePath} ...");
 
-            List<string> filePaths = new List<string> { serviceManagerPath, agentExecutablePath };
+            List<string> filePaths = [serviceManagerPath, agentExecutablePath];
 
             if (OsType == "win32")
             {

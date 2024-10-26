@@ -1,15 +1,11 @@
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.IOIHUB
 {
     public class ConnectionManager
     {
@@ -257,9 +253,9 @@ namespace RewstRemoteAgent
 
     public class ConfigData
     {
-        public string AzureIotHubHost { get; set; }
-        public string DeviceId { get; set; }
-        public string SharedAccessKey { get; set; }
-        public string RewstEngineHost { get; set; }
+        public string? AzureIotHubHost { get; set; }
+        public string? DeviceId { get; set; }
+        public string? SharedAccessKey { get; set; }
+        public string? RewstEngineHost { get; set; }
     }
 }

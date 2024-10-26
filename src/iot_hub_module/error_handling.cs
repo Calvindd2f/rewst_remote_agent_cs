@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using LogLevel = NLog.LogLevel;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.IOIHUB
 {
     public static class Logger
     {

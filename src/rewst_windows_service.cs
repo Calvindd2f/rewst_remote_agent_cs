@@ -1,18 +1,17 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.ServiceProcess;
 using System.Timers;
 using Microsoft.Extensions.Logging;
+using Rewst.Log;
+using Rewst.RemoteAgent.IOIHUB;
+using Rewst.RemoteAgent.Service;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent
 {
     public class RewstWindowsService : ServiceBase
     {
-        private ILogger<RewstWindowsService> _logger;
+        private static ILogger<Program>? _logger;
         private Process _process;
-        private Timer _timer;
+        private System.Threading.Timer _timer;
         private string _orgId;
         private string _agentExecutablePath;
 
@@ -22,7 +21,7 @@ namespace RewstRemoteAgent
             ServiceName = "RewstRemoteAgent";
         }
 
-        protected override void OnStart(string[] args)
+        protected override void OnStart(string[] args, ILogger? _logger)
         {
             _logger.LogInformation("Service is starting...");
             _orgId = GetOrgIdFromExecutableName();
@@ -41,7 +40,7 @@ namespace RewstRemoteAgent
 
             StartProcess();
 
-            _timer = new Timer(5000); // Check every 5 seconds
+            _timer = new Timer(5000);
             _timer.Elapsed += OnTimerElapsed;
             _timer.Start();
         }
@@ -57,7 +56,7 @@ namespace RewstRemoteAgent
         {
             try
             {
-                if (IsChecksumValid(_agentExecutablePath))
+                if (IsChecksumValidAsync(_agentExecutablePath))
                 {
                     _logger.LogInformation($"Verified that the executable {_agentExecutablePath} has a valid signature.");
                     string processName = Path.GetFileNameWithoutExtension(_agentExecutablePath);
@@ -100,7 +99,7 @@ namespace RewstRemoteAgent
             }
 
             string processName = Path.GetFileNameWithoutExtension(_agentExecutablePath);
-            foreach (var proc in Process.GetProcessesByName(processName))
+            foreach (Process proc in Process.GetProcessesByName(processName))
             {
                 try
                 {
@@ -127,7 +126,7 @@ namespace RewstRemoteAgent
 
         private string GetOrgIdFromExecutableName()
         {
-            var pattern = @"rewst_.*_(.+?)\.";
+            string pattern = @"rewst_.*_(.+?)\.";
             var regex = new Regex(pattern);
             var match = regex.Match(AppDomain.CurrentDomain.FriendlyName);
 
@@ -144,7 +143,7 @@ namespace RewstRemoteAgent
         private string GetAgentExecutablePath(string orgId)
         {
             string executableName;
-            var osType = RuntimeInformation.OSDescription.ToLower();
+            int osType = RuntimeInformation.OSDescription.ToLower();
 
             switch (osType)
             {
@@ -166,19 +165,19 @@ namespace RewstRemoteAgent
             return executableName;
         }
 
-        private bool IsChecksumValid(string filePath)
+        private async Task<bool> IsChecksumValidAsync(string filePath)
         {
-            var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ChecksumVerifier>();
-            var httpClient = new HttpClient();
-            var verifier = new ChecksumVerifier(logger, httpClient);
+            var logger = Log.LogUtil.LogInfo;
+            HttpClient httpClient = new HttpClient();
+            ChecksumVerifier verifier = new ChecksumVerifier(httpClient);
 
-            var isValid = await verifier.IsChecksumValidAsync(filePath);
+            bool isValid = await verifier.IsChecksumValidAsync(filePath);
             return isValid;
         }
 
         public static void Main()
         {
-            using (var service = new RewstWindowsService(new LoggerFactory().CreateLogger<RewstWindowsService>()))
+            using (RewstWindowsService service = new RewstWindowsService(new LoggerFactory().CreateLogger<RewstWindowsService>()))
             {
                 ServiceBase.Run(service);
             }

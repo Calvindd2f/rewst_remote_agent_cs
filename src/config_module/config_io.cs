@@ -1,15 +1,11 @@
-using System;
 using System.Text.Json;
 using NLog;
-using System.IO;
-using System.Environment;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using NLog.Targets;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.Config
 {
     public static class ConfigIO
     {

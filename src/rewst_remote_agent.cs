@@ -1,18 +1,14 @@
-using System;
-using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Rewst.Log;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent
 {
     internal class Program
     {
-        private static ILogger<Program> _logger;
+        private static ILogger<Program>? _logger;
         private static CancellationTokenSource _cts = new CancellationTokenSource();
 
         private static async Task Main(string[] args)

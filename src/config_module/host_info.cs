@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Management;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.Config
 {
     public static class HostInfoHelper
     {

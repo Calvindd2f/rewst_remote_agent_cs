@@ -1,20 +1,12 @@
-using System;
-using System.Configuration.Install;
-using System.IO;
 using System.Reflection;
-using System.Diagnostics;
-using System.ServiceProcess;
-using System.Runtime.InteropServices;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Rewst.Log;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent
 {
     public static class ServiceManager
     {
         private static ILogger<ServiceManager>? _logger;
-        private static string _serviceName;
+        private static string? _serviceName;
 
         private static void Main(string[] args)
         {

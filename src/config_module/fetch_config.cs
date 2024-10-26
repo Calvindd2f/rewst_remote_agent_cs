@@ -1,24 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent.Config
 {
     public class ConfigurationFetcher
     {
         private readonly ILogger<ConfigurationFetcher> _logger;
-        private static readonly HashSet<string> RequiredKeys = new HashSet<string>
-        {
+        private static readonly HashSet<string> RequiredKeys =
+        [
             "azure_iot_hub_host",
             "device_id",
             "shared_access_key",
             "rewst_engine_host",
             "rewst_org_id",
-        };
+        ];
 
         private static readonly ConcurrentDictionary<string, Dictionary<string, string>> ConfigCache = new ConcurrentDictionary<string, Dictionary<string, string>>();
 
@@ -149,7 +145,7 @@ namespace RewstRemoteAgent
 
         private Dictionary<string, string> BuildHostTags(string orgId)
         {
-            return new Dictionary<string, string>();
+            return [];
         }
     }
 }

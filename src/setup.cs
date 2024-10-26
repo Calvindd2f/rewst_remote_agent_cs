@@ -1,9 +1,3 @@
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.NET.Sdk;
-
 public class PackageSetup
 {
     public static void Main(string[] args)
