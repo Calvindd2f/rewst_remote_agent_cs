@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Rewst.RemoteAgent
@@ -43,7 +44,7 @@ namespace Rewst.RemoteAgent
             return Process.GetProcessesByName(executableName).Length > 0;
         }
 
-        public static void InstallService(string orgId)
+        public static async Task InstallService(string orgId)
         {
             var executablePath = GetAgentExecutablePath(orgId);
             var serviceName = GetServiceName(orgId);
@@ -62,7 +63,7 @@ namespace Rewst.RemoteAgent
                 case "windows":
                     Logger.LogInformation($"Installing Windows Service: {serviceName}");
                     var windowsServicePath = GetServiceExecutablePath(orgId);
-                    Process.Start(windowsServicePath, "install").WaitForExit();
+                    await Task.Run(() => Process.Start(windowsServicePath, "install").WaitForExit());
                     break;
 
                 case "linux":
@@ -77,9 +78,11 @@ namespace Rewst.RemoteAgent
                     [Install]
                     WantedBy=multi-user.target
                     ";
-                    File.WriteAllText($"/etc/systemd/system/{serviceName}.service", systemdServiceContent);
-                    Process.Start("systemctl", "daemon-reload").WaitForExit();
-                    Process.Start("systemctl", $"enable {serviceName}").WaitForExit();
+                    await File.WriteAllTextAsync($"/etc/systemd/system/{serviceName}.service", systemdServiceContent);
+                    await Task.WhenAll(
+                        Task.Run(() => Process.Start("systemctl", "daemon-reload").WaitForExit()),
+                        Task.Run(() => Process.Start("systemctl", $"enable {serviceName}").WaitForExit())
+                    );
                     break;
 
                 case "darwin":
@@ -102,8 +105,8 @@ namespace Rewst.RemoteAgent
                     </plist>
                     ";
                     var plistPath = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/Library/LaunchAgents/{serviceName}.plist";
-                    File.WriteAllText(plistPath, launchdPlistContent);
-                    Process.Start("launchctl", $"load {plistPath}").WaitForExit();
+                    await File.WriteAllTextAsync(plistPath, launchdPlistContent);
+                    await Task.Run(() => Process.Start("launchctl", $"load {plistPath}").WaitForExit());
                     break;
 
                 default:
@@ -111,14 +114,14 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        public static void UninstallService(string orgId)
+        public static async Task UninstallService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
             Logger.LogInformation($"Uninstalling service {serviceName}.");
 
             try
             {
-                StopService(orgId);
+                await StopService(orgId);
             }
             catch (Exception e)
             {
@@ -130,7 +133,7 @@ namespace Rewst.RemoteAgent
                 case "windows":
                     try
                     {
-                        Process.Start("sc", $"delete {serviceName}").WaitForExit();
+                        await Task.Run(() => Process.Start("sc", $"delete {serviceName}").WaitForExit());
                     }
                     catch (Exception e)
                     {
@@ -139,15 +142,19 @@ namespace Rewst.RemoteAgent
                     break;
 
                 case "linux":
-                    Process.Start("systemctl", $"disable {serviceName}").WaitForExit();
-                    File.Delete($"/etc/systemd/system/{serviceName}.service");
-                    Process.Start("systemctl", "daemon-reload").WaitForExit();
+                    await Task.WhenAll(
+                        Task.Run(() => Process.Start("systemctl", $"disable {serviceName}").WaitForExit()),
+                        Task.Run(() => File.Delete($"/etc/systemd/system/{serviceName}.service")),
+                        Task.Run(() => Process.Start("systemctl", "daemon-reload").WaitForExit())
+                    );
                     break;
 
                 case "darwin":
                     var plistPath = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/Library/LaunchAgents/{serviceName}.plist";
-                    Process.Start("launchctl", $"unload {plistPath}").WaitForExit();
-                    File.Delete(plistPath);
+                    await Task.WhenAll(
+                        Task.Run(() => Process.Start("launchctl", $"unload {plistPath}").WaitForExit()),
+                        Task.Run(() => File.Delete(plistPath))
+                    );
                     break;
 
                 default:
@@ -155,7 +162,7 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        public static void CheckServiceStatus(string orgId)
+        public static async Task CheckServiceStatus(string orgId)
         {
             var serviceName = GetServiceName(orgId);
 
@@ -176,12 +183,12 @@ namespace Rewst.RemoteAgent
                 case "linux":
                     try
                     {
-                        var process = Process.Start(new ProcessStartInfo("systemctl", $"is-active {serviceName}")
+                        var process = await Task.Run(() => Process.Start(new ProcessStartInfo("systemctl", $"is-active {serviceName}")
                         {
                             RedirectStandardOutput = true,
                             UseShellExecute = false
-                        });
-                        Logger.LogInformation($"Service status: {process.StandardOutput.ReadToEnd().Trim()}");
+                        }));
+                        Logger.LogInformation($"Service status: {await process.StandardOutput.ReadToEndAsync().Trim()}");
                     }
                     catch (Exception e)
                     {
@@ -192,12 +199,12 @@ namespace Rewst.RemoteAgent
                 case "darwin":
                     try
                     {
-                        var process = Process.Start(new ProcessStartInfo("launchctl", $"list {serviceName}")
+                        var process = await Task.Run(() => Process.Start(new ProcessStartInfo("launchctl", $"list {serviceName}")
                         {
                             RedirectStandardOutput = true,
                             UseShellExecute = false
-                        });
-                        var output = process.StandardOutput.ReadToEnd();
+                        }));
+                        var output = await process.StandardOutput.ReadToEndAsync();
                         Logger.LogInformation($"Service status: {(output.Contains(serviceName) ? "Running" : "Not Running")}");
                     }
                     catch (Exception e)
@@ -212,7 +219,7 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        public static void StartService(string orgId)
+        public static async Task StartService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
             Logger.LogInformation($"Starting Service {serviceName} for {OsType}");
@@ -223,16 +230,16 @@ namespace Rewst.RemoteAgent
                     using (var service = new ServiceController(serviceName))
                     {
                         service.Start();
-                        service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                        await Task.Run(() => service.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30)));
                     }
                     break;
 
                 case "linux":
-                    Process.Start("systemctl", $"start {serviceName}").WaitForExit();
+                    await Task.Run(() => Process.Start("systemctl", $"start {serviceName}").WaitForExit());
                     break;
 
                 case "darwin":
-                    Process.Start("launchctl", $"start {serviceName}").WaitForExit();
+                    await Task.Run(() => Process.Start("launchctl", $"start {serviceName}").WaitForExit());
                     break;
 
                 default:
@@ -240,7 +247,7 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        public static void StopService(string orgId)
+        public static async Task StopService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
 
@@ -252,17 +259,17 @@ namespace Rewst.RemoteAgent
                         if (service.Status != ServiceControllerStatus.Stopped)
                         {
                             service.Stop();
-                            service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+                            await Task.Run(() => service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30)));
                         }
                     }
                     break;
 
                 case "linux":
-                    Process.Start("systemctl", $"stop {serviceName}").WaitForExit();
+                    await Task.Run(() => Process.Start("systemctl", $"stop {serviceName}").WaitForExit());
                     break;
 
                 case "darwin":
-                    Process.Start("launchctl", $"stop {serviceName}").WaitForExit();
+                    await Task.Run(() => Process.Start("launchctl", $"stop {serviceName}").WaitForExit());
                     break;
 
                 default:
@@ -270,10 +277,10 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        public static void RestartService(string orgId)
+        public static async Task RestartService(string orgId)
         {
-            StopService(orgId);
-            StartService(orgId);
+            await StopService(orgId);
+            await StartService(orgId);
         }
 
         private static string GetAgentExecutablePath(string orgId) => throw new NotImplementedException();

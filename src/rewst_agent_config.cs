@@ -346,5 +346,32 @@ namespace Rewst.RemoteAgent
                 Logger.LogError(e, "An error occurred");
             }
         }
+
+        private static async Task<Dictionary<string, object>> FetchConfiguration(string configUrl, string configSecret, string orgId)
+        {
+            var fetcher = new ConfigurationFetcher(Logger);
+            return await fetcher.FetchConfigurationAsync(configUrl, configSecret, orgId);
+        }
+
+        private static void SaveConfiguration(Dictionary<string, object> configData)
+        {
+            var configFilePath = ConfigIO.GetConfigFilePath(configData["rewst_org_id"].ToString());
+            ConfigIO.SaveConfigurationAsync(configData, configFilePath).Wait();
+        }
+
+        private static string GetServiceManagerPath(string orgId)
+        {
+            return ConfigIO.GetServiceManagerPath(orgId);
+        }
+
+        private static string GetAgentExecutablePath(string orgId)
+        {
+            return ConfigIO.GetAgentExecutablePath(orgId);
+        }
+
+        private static string GetServiceExecutablePath(string orgId)
+        {
+            return ConfigIO.GetServiceExecutablePath(orgId);
+        }
     }
 }
