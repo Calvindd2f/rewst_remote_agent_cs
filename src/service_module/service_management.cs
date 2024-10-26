@@ -1,16 +1,17 @@
+using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
+using System.ServiceProcess;
+using System.Threading.Tasks;
 
-namespace Rewst.RemoteAgent.Service
+namespace Rewst.RemoteAgent
 {
     public interface IServiceManager
     {
         private static readonly string OsType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "windows" :
                                                 RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux" :
                                                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "darwin" : "unknown";
-
-        private static readonly ILogger<IServiceManager> Logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<IServiceManager>();
 
         public static string GetServiceName(string orgId)
         {
@@ -35,30 +36,30 @@ namespace Rewst.RemoteAgent.Service
 
         public static bool IsServiceRunning(string orgId)
         {
-            var executablePath = GetAgentExecutablePath(orgId);
+            var executablePath = ConfigIO.GetAgentExecutablePath(orgId);
             var executableName = Path.GetFileName(executablePath);
             return Process.GetProcessesByName(executableName).Length > 0;
         }
 
         public static async Task InstallService(string orgId)
         {
-            var executablePath = GetAgentExecutablePath(orgId);
+            var executablePath = ConfigIO.GetAgentExecutablePath(orgId);
             var serviceName = GetServiceName(orgId);
-            var configFilePath = GetConfigFilePath(orgId);
+            var configFilePath = ConfigIO.GetConfigFilePath(orgId);
 
-            Logger.LogInformation($"Installing {serviceName} Service...");
+            LogUtil.LogInfo($"Installing {serviceName} Service...");
 
             if (IsServiceInstalled(orgId))
             {
-                Logger.LogInformation("Service is already installed.");
+                LogUtil.LogInfo("Service is already installed.");
                 return;
             }
 
             switch (OsType)
             {
                 case "windows":
-                    Logger.LogInformation($"Installing Windows Service: {serviceName}");
-                    var windowsServicePath = GetServiceExecutablePath(orgId);
+                    LogUtil.LogInfo($"Installing Windows Service: {serviceName}");
+                    var windowsServicePath = ConfigIO.GetServiceExecutablePath(orgId);
                     await Task.Run(() => Process.Start(windowsServicePath, "install").WaitForExit());
                     break;
 
@@ -113,7 +114,7 @@ namespace Rewst.RemoteAgent.Service
         public static async Task UninstallService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
-            Logger.LogInformation($"Uninstalling service {serviceName}.");
+            LogUtil.LogInfo($"Uninstalling service {serviceName}.");
 
             try
             {
@@ -121,7 +122,7 @@ namespace Rewst.RemoteAgent.Service
             }
             catch (Exception e)
             {
-                Logger.LogError($"Unable to stop service: {e.Message}");
+                LogUtil.LogError($"Unable to stop service: {e.Message}");
             }
 
             switch (OsType)
@@ -133,7 +134,7 @@ namespace Rewst.RemoteAgent.Service
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError($"Exception removing service: {e.Message}");
+                        LogUtil.LogError($"Exception removing service: {e.Message}");
                     }
                     break;
 
@@ -168,11 +169,11 @@ namespace Rewst.RemoteAgent.Service
                     try
                     {
                         using var service = new ServiceController(serviceName);
-                        Logger.LogInformation($"Service status: {service.Status}");
+                        LogUtil.LogInfo($"Service status: {service.Status}");
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError($"Error: {e.Message}");
+                        LogUtil.LogError($"Error: {e.Message}");
                     }
                     break;
 
@@ -184,11 +185,11 @@ namespace Rewst.RemoteAgent.Service
                             RedirectStandardOutput = true,
                             UseShellExecute = false
                         }));
-                        Logger.LogInformation($"Service status: {await process.StandardOutput.ReadToEndAsync().Trim()}");
+                        LogUtil.LogInfo($"Service status: {await process.StandardOutput.ReadToEndAsync().Trim()}");
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError($"Error: {e.Message}");
+                        LogUtil.LogError($"Error: {e.Message}");
                     }
                     break;
 
@@ -201,16 +202,16 @@ namespace Rewst.RemoteAgent.Service
                             UseShellExecute = false
                         }));
                         var output = await process.StandardOutput.ReadToEndAsync();
-                        Logger.LogInformation($"Service status: {(output.Contains(serviceName) ? "Running" : "Not Running")}");
+                        LogUtil.LogInfo($"Service status: {(output.Contains(serviceName) ? "Running" : "Not Running")}");
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError($"Error: {e.Message}");
+                        LogUtil.LogError($"Error: {e.Message}");
                     }
                     break;
 
                 default:
-                    Logger.LogError($"Unsupported OS type: {OsType}");
+                    LogUtil.LogError($"Unsupported OS type: {OsType}");
                     break;
             }
         }
@@ -218,7 +219,7 @@ namespace Rewst.RemoteAgent.Service
         public static async Task StartService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
-            Logger.LogInformation($"Starting Service {serviceName} for {OsType}");
+            LogUtil.LogInfo($"Starting Service {serviceName} for {OsType}");
 
             switch (OsType)
             {
@@ -278,9 +279,5 @@ namespace Rewst.RemoteAgent.Service
             await StopService(orgId);
             await StartService(orgId);
         }
-
-        private static string GetAgentExecutablePath(string orgId) => throw new NotImplementedException();
-        private static string GetConfigFilePath(string orgId) => throw new NotImplementedException();
-        private static string GetServiceExecutablePath(string orgId) => throw new NotImplementedException();
     }
 }

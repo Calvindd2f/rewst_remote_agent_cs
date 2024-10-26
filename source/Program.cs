@@ -35,14 +35,11 @@ namespace Rewst.RemoteAgent.Calvindd2f
                     bool flag = true;
                     string text2 = "";
                     bool activityNode = false;
-                    Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
-                        "Log file name: LogFile_Installer.txt",
-                        ""
-                    );
+                    LogUtil.LogInfo("Log file name: LogFile_Installer.txt", "");
                     string folderPath = System.Environment.GetFolderPath(0x26);
                     string text3 = System.IO.Path.Combine(folderPath, " Agent");
                     string text4 = System.IO.Path.Combine(folderPath, text3);
-                    Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo("Location: " + text4, "");
+                    LogUtil.LogInfo("Location: " + text4, "");
                     int i = 0;
                     while (i < args.Length)
                     {
@@ -62,7 +59,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                             }
                             catch (System.Exception ex)
                             {
-                                Rewst.RemoteAgent.Calvindd2f.LogUtil.LogError(
+                                LogUtil.LogError(
                                     ex.Message,
                                     "Error encountered while parsing client id.\r\n"
                                         + Rewst.RemoteAgent.Calvindd2f.ExceptionLoggingUtil.GetExceptionInformation(
@@ -90,7 +87,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                             {
                                 i--;
                                 flag = true;
-                                Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                                LogUtil.LogInfo(
                                     "Value for \"clearcertificate\" was not found. Setting it to true.",
                                     ""
                                 );
@@ -108,7 +105,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                             catch (System.Exception)
                             {
                                 i--;
-                                Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                                LogUtil.LogInfo(
                                     "Value for \"tenantName\" was not found. Setting it to true.",
                                     ""
                                 );
@@ -131,7 +128,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                     }
                     if (string.Compare(text, "-uninstall", true) == 0)
                     {
-                        Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                        LogUtil.LogInfo(
                             "Execute silent uninstall for agent service",
                             ""
                         );
@@ -139,7 +136,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                     }
                     else if (string.Compare(text, "-install", true) == 0)
                     {
-                        Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                        LogUtil.LogInfo(
                             "Execute silent install for agent service",
                             ""
                         );
@@ -157,13 +154,13 @@ namespace Rewst.RemoteAgent.Calvindd2f
                     }
                     else if (string.Compare(text, "-update", true) == 0)
                     {
-                        Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                        LogUtil.LogInfo(
                             "Execute silent update for agent service",
                             ""
                         );
                         Rewst.RemoteAgent.Calvindd2f.AgentInstallController.Update(false);
                     }
-                    Rewst.RemoteAgent.Calvindd2f.LogUtil.LogInfo(
+                    LogUtil.LogInfo(
                         string.Format("Client id: {0} clearcert: {1} action: {2}", num, flag, text),
                         ""
                     );
@@ -171,7 +168,7 @@ namespace Rewst.RemoteAgent.Calvindd2f
                 }
                 catch (System.Exception ex2)
                 {
-                    Rewst.RemoteAgent.Calvindd2f.LogUtil.LogError(
+                    LogUtil.LogError(
                         ex2.Message,
                         Rewst.RemoteAgent.Calvindd2f.ExceptionLoggingUtil.GetExceptionInformation(
                             ex2

@@ -1,53 +1,56 @@
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.ServiceProcess;
 using System.Timers;
-using Microsoft.Extensions.Logging;
-using Rewst.Log;
-using Rewst.RemoteAgent.IOIHUB;
-using Rewst.RemoteAgent.Service;
+using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Rewst.RemoteAgent.Calvindd2f;
 
-namespace Rewst.RemoteAgent
+namespace RewstRemoteAgent
 {
     public class RewstWindowsService : ServiceBase
     {
-        private static ILogger<Program>? _logger;
         private Process _process;
-        private System.Threading.Timer _timer;
+        private Timer _timer;
         private string _orgId;
         private string _agentExecutablePath;
 
-        public RewstWindowsService(ILogger<RewstWindowsService> logger)
+        public RewstWindowsService()
         {
-            _logger = logger;
             ServiceName = "RewstRemoteAgent";
         }
 
-        protected override void OnStart(string[] args, ILogger? _logger)
+        protected override void OnStart(string[] args)
         {
-            _logger.LogInformation("Service is starting...");
+            LogUtil.LogInfo("Service is starting...");
             _orgId = GetOrgIdFromExecutableName();
 
             if (!string.IsNullOrEmpty(_orgId))
             {
                 ServiceName = $"RewstRemoteAgent_{_orgId}";
-                _logger.LogInformation($"Found Org ID {_orgId}");
-                _agentExecutablePath = GetAgentExecutablePath(_orgId);
+                LogUtil.LogInfo($"Found Org ID {_orgId}");
+                _agentExecutablePath = ConfigIO.GetAgentExecutablePath(_orgId);
             }
             else
             {
-                _logger.LogWarning("Org ID not found in executable name");
+                LogUtil.LogWarning("Org ID not found in executable name");
                 return;
             }
 
             StartProcess();
 
-            _timer = new Timer(5000);
+            _timer = new Timer(5000); // Check every 5 seconds
             _timer.Elapsed += OnTimerElapsed;
             _timer.Start();
         }
 
         protected override void OnStop()
         {
-            _logger.LogInformation("Service is stopping...");
+            LogUtil.LogInfo("Service is stopping...");
             StopProcess();
             _timer?.Stop();
         }
@@ -56,11 +59,11 @@ namespace Rewst.RemoteAgent
         {
             try
             {
-                if (IsChecksumValidAsync(_agentExecutablePath))
+                if (IsChecksumValid(_agentExecutablePath).Result)
                 {
-                    _logger.LogInformation($"Verified that the executable {_agentExecutablePath} has a valid signature.");
+                    LogUtil.LogInfo($"Verified that the executable {_agentExecutablePath} has a valid signature.");
                     string processName = Path.GetFileNameWithoutExtension(_agentExecutablePath);
-                    _logger.LogInformation($"Launching process for {processName}");
+                    LogUtil.LogInfo($"Launching process for {processName}");
 
                     _process = new Process
                     {
@@ -75,12 +78,12 @@ namespace Rewst.RemoteAgent
                     };
 
                     _process.Start();
-                    _logger.LogInformation($"Started process with PID {_process.Id}.");
+                    LogUtil.LogInfo($"Started process with PID {_process.Id}.");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to start external process");
+                LogUtil.LogError("Failed to start external process", ex.ToString());
             }
         }
 
@@ -88,45 +91,45 @@ namespace Rewst.RemoteAgent
         {
             if (_process != null && !_process.HasExited)
             {
-                _logger.LogInformation($"Attempting to terminate process with PID {_process.Id}");
+                LogUtil.LogInfo($"Attempting to terminate process with PID {_process.Id}");
                 _process.Kill();
                 _process.WaitForExit(10000);
                 if (!_process.HasExited)
                 {
-                    _logger.LogWarning($"Process with PID {_process.Id} did not terminate in time. Forcing kill.");
+                    LogUtil.LogWarning($"Process with PID {_process.Id} did not terminate in time. Forcing kill.");
                     _process.Kill(true);
                 }
             }
 
             string processName = Path.GetFileNameWithoutExtension(_agentExecutablePath);
-            foreach (Process proc in Process.GetProcessesByName(processName))
+            foreach (var proc in Process.GetProcessesByName(processName))
             {
                 try
                 {
-                    _logger.LogInformation($"Force killing leftover process with PID {proc.Id}.");
+                    LogUtil.LogInfo($"Force killing leftover process with PID {proc.Id}.");
                     proc.Kill();
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Failed to kill leftover process with PID {proc.Id}");
+                    LogUtil.LogError($"Failed to kill leftover process with PID {proc.Id}", ex.ToString());
                 }
             }
 
-            _logger.LogInformation("All processes stopped.");
+            LogUtil.LogInfo("All processes stopped.");
         }
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
             if (_process == null || _process.HasExited)
             {
-                _logger.LogWarning("External process terminated unexpectedly. Restarting.");
+                LogUtil.LogWarning("External process terminated unexpectedly. Restarting.");
                 StartProcess();
             }
         }
 
         private string GetOrgIdFromExecutableName()
         {
-            string pattern = @"rewst_.*_(.+?)\.";
+            var pattern = @"rewst_.*_(.+?)\.";
             var regex = new Regex(pattern);
             var match = regex.Match(AppDomain.CurrentDomain.FriendlyName);
 
@@ -140,44 +143,19 @@ namespace Rewst.RemoteAgent
             }
         }
 
-        private string GetAgentExecutablePath(string orgId)
+        private async Task<bool> IsChecksumValid(string filePath)
         {
-            string executableName;
-            int osType = RuntimeInformation.OSDescription.ToLower();
+            var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ChecksumVerifier>();
+            var httpClient = new HttpClient();
+            var verifier = new ChecksumVerifier(logger, httpClient);
 
-            switch (osType)
-            {
-                case var o when o.Contains("windows"):
-                    executableName = $"rewst_service_manager.win_{orgId}.exe";
-                    break;
-                case var o when o.Contains("linux"):
-                    executableName = $"rewst_service_manager.linux_{orgId}.bin";
-                    break;
-                case var o when o.Contains("darwin"):
-                    executableName = $"rewst_service_manager.darwin_{orgId}.nim";
-                    break;
-                default:
-                    _logger.LogError($"Unsupported OS type: {osType}. Send this output to Rewst for investigation!");
-                    Environment.Exit(1);
-                    return null;
-            }
-
-            return executableName;
-        }
-
-        private async Task<bool> IsChecksumValidAsync(string filePath)
-        {
-            var logger = Log.LogUtil.LogInfo;
-            HttpClient httpClient = new HttpClient();
-            ChecksumVerifier verifier = new ChecksumVerifier(httpClient);
-
-            bool isValid = await verifier.IsChecksumValidAsync(filePath);
+            var isValid = await verifier.IsChecksumValidAsync(filePath);
             return isValid;
         }
 
         public static void Main()
         {
-            using (RewstWindowsService service = new RewstWindowsService(new LoggerFactory().CreateLogger<RewstWindowsService>()))
+            using (var service = new RewstWindowsService())
             {
                 ServiceBase.Run(service);
             }
