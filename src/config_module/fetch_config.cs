@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace RewstRemoteAgent
 {
@@ -19,6 +20,8 @@ namespace RewstRemoteAgent
             "rewst_org_id",
         };
 
+        private static readonly ConcurrentDictionary<string, Dictionary<string, string>> ConfigCache = new ConcurrentDictionary<string, Dictionary<string, string>>();
+
         public ConfigurationFetcher(ILogger<ConfigurationFetcher> logger)
         {
             _logger = logger;
@@ -30,6 +33,12 @@ namespace RewstRemoteAgent
             string orgId = null
         )
         {
+            if (ConfigCache.TryGetValue(configUrl, out var cachedConfig))
+            {
+                _logger.LogInformation("Returning cached configuration.");
+                return cachedConfig;
+            }
+
             var hostInfo = BuildHostTags(orgId);
 
             var headers = new Dictionary<string, string>();
@@ -79,7 +88,14 @@ namespace RewstRemoteAgent
 
                                 if (configData != null && RequiredKeys.IsSubsetOf(configData.Keys))
                                 {
-                                    return configData;
+                                    var configDict = new Dictionary<string, string>();
+                                    foreach (var kvp in configData)
+                                    {
+                                        configDict[kvp.Key] = kvp.Value.ToString();
+                                    }
+
+                                    ConfigCache[configUrl] = configDict;
+                                    return configDict;
                                 }
                                 else
                                 {

@@ -562,5 +562,3 @@ namespace Rewst.RemoteAgent.Calvindd2f
 		}
 	}
 }
-
-

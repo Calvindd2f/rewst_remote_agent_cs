@@ -6,12 +6,15 @@ using System.Environment;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using NLog.Targets;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace RewstRemoteAgent
 {
     public static class ConfigIO
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly ConcurrentDictionary<string, string> ConfigCache = new ConcurrentDictionary<string, string>();
 
         public static string GetExecutableFolder(string orgId)
         {
@@ -181,25 +184,32 @@ namespace RewstRemoteAgent
             return configFilePath;
         }
 
-        public static void SaveConfiguration(object configData, string configFilePath = null)
+        public static async Task SaveConfigurationAsync(object configData, string configFilePath = null)
         {
             var orgId = configData.GetType().GetProperty("rewst_org_id").GetValue(configData, null).ToString();
-            var configFilePath = GetConfigFilePath(orgId);
+            configFilePath = GetConfigFilePath(orgId);
 
             if (string.IsNullOrEmpty(configFilePath))
             {
                 throw new ArgumentException("Configuration file path cannot be null or empty.", nameof(configFilePath));
             }
 
-            File.WriteAllText(configFilePath, JsonSerializer.Serialize(configData, new JsonSerializerOptions { WriteIndented = true }));
+            var jsonData = JsonSerializer.Serialize(configData, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(configFilePath, jsonData);
+            ConfigCache[configFilePath] = jsonData;
             Console.WriteLine($"Configuration saved to {configFilePath}");
         }
 
-        public static async Task<string> LoadConfiguration(string orgId = null, string configFilePath = null)
+        public static async Task<string> LoadConfigurationAsync(string orgId = null, string configFilePath = null)
         {
             if (string.IsNullOrEmpty(configFilePath))
             {
                 throw new ArgumentException("Configuration file path cannot be null or empty.", nameof(configFilePath));
+            }
+
+            if (ConfigCache.TryGetValue(configFilePath, out var cachedConfig))
+            {
+                return cachedConfig;
             }
 
             if (!File.Exists(configFilePath))
@@ -210,10 +220,7 @@ namespace RewstRemoteAgent
             try
             {
                 string jsonString = await File.ReadAllTextAsync(configFilePath);
-
-                // Optionally, you can deserialize the JSON string into a specific object
-                // var configData = JsonSerializer.Deserialize<YourConfigType>(jsonString);
-
+                ConfigCache[configFilePath] = jsonString;
                 return jsonString;
             }
             catch (Exception ex)

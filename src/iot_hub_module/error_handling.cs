@@ -66,5 +66,15 @@ namespace RewstRemoteAgent
         {
             _logger.LogInformation(infoMessage);
         }
+
+        public static void LogWarning(string warningMessage)
+        {
+            _logger.LogWarning(warningMessage);
+        }
+
+        public static void LogDebug(string debugMessage)
+        {
+            _logger.LogDebug(debugMessage);
+        }
     }
 }
