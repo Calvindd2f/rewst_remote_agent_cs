@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Devices.Client;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace RewstRemoteAgent
@@ -16,8 +17,9 @@ namespace RewstRemoteAgent
         private readonly string _connectionString;
         private readonly DeviceClient _client;
         private readonly string _osType;
+        private readonly ILogger<ConnectionManager> _logger;
 
-        public ConnectionManager(ConfigData configData)
+        public ConnectionManager(ConfigData configData, ILogger<ConnectionManager> logger)
         {
             _configData = configData;
             _connectionString = GetConnectionString();
@@ -26,6 +28,7 @@ namespace RewstRemoteAgent
                 : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "darwin"
                 : "linux";
             _client = DeviceClient.CreateFromConnectionString(_connectionString);
+            _logger = logger;
         }
 
         private string GetConnectionString()
@@ -40,11 +43,11 @@ namespace RewstRemoteAgent
             try
             {
                 await _client.OpenAsync();
-                Console.WriteLine("Connected to IoT Hub");
+                _logger.LogInformation("Connected to IoT Hub");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Exception in connection to the IoT Hub: {e}");
+                _logger.LogError($"Exception in connection to the IoT Hub: {e}");
             }
         }
 
@@ -53,11 +56,11 @@ namespace RewstRemoteAgent
             try
             {
                 await _client.CloseAsync();
-                Console.WriteLine("Disconnected from IoT Hub");
+                _logger.LogInformation("Disconnected from IoT Hub");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Exception in disconnecting from the IoT Hub: {e}");
+                _logger.LogError($"Exception in disconnecting from the IoT Hub: {e}");
             }
         }
 
@@ -75,7 +78,7 @@ namespace RewstRemoteAgent
 
         private async Task<MessageResponse> HandleMessageAsync(Message message, object userContext)
         {
-            Console.WriteLine("Received IoT Hub message in HandleMessageAsync.");
+            _logger.LogInformation("Received IoT Hub message in HandleMessageAsync.");
             try
             {
                 var messageData = JsonConvert.DeserializeObject<dynamic>(
@@ -92,42 +95,42 @@ namespace RewstRemoteAgent
                     var postPath = postId.Replace(":", "/");
                     var rewstEngineHost = _configData.RewstEngineHost;
                     postUrl = $"https://{rewstEngineHost}/webhooks/custom/action/{postPath}";
-                    Console.WriteLine($"Will POST results to {postUrl}");
+                    _logger.LogInformation($"Will POST results to {postUrl}");
                 }
 
                 if (!string.IsNullOrEmpty(commands))
                 {
-                    Console.WriteLine("Received commands in message");
+                    _logger.LogInformation("Received commands in message");
                     try
                     {
                         await ExecuteCommandsAsync(commands, postUrl, interpreterOverride);
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Exception running commands: {e}");
+                        _logger.LogError($"Exception running commands: {e}");
                     }
                 }
 
                 if (getInstallationInfo)
                 {
-                    Console.WriteLine("Received request for installation paths");
+                    _logger.LogInformation("Received request for installation paths");
                     try
                     {
                         await GetInstallationAsync(postUrl);
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Exception getting installation info: {e}");
+                        _logger.LogError($"Exception getting installation info: {e}");
                     }
                 }
             }
             catch (JsonException e)
             {
-                Console.WriteLine($"Error decoding message data as JSON: {e}");
+                _logger.LogError($"Error decoding message data as JSON: {e}");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An unexpected error occurred: {e}");
+                _logger.LogError($"An unexpected error occurred: {e}");
             }
 
             return MessageResponse.Completed;
@@ -140,7 +143,7 @@ namespace RewstRemoteAgent
         )
         {
             var interpreter = interpreterOverride ?? GetDefaultInterpreter();
-            Console.WriteLine($"Using interpreter: {interpreter}");
+            _logger.LogInformation($"Using interpreter: {interpreter}");
 
             var decodedCommands = Encoding.UTF8.GetString(Convert.FromBase64String(commands));
             var scriptExtension = interpreter.ToLower().Contains("powershell") ? ".ps1" : ".sh";
@@ -157,7 +160,7 @@ namespace RewstRemoteAgent
 
             try
             {
-                Console.WriteLine($"Running process via command line: {shellCommand}");
+                _logger.LogInformation($"Running process via command line: {shellCommand}");
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = interpreter,
@@ -175,13 +178,13 @@ namespace RewstRemoteAgent
                 await process.WaitForExitAsync();
 
                 var exitCode = process.ExitCode;
-                Console.WriteLine($"Command completed with exit code {exitCode}");
+                _logger.LogInformation($"Command completed with exit code {exitCode}");
 
                 dynamic outputMessageData;
                 if (exitCode != 0 || !string.IsNullOrEmpty(stderr))
                 {
                     var errorMessage = $"Script execution failed with exit code {exitCode}. Error: {stderr}";
-                    Console.WriteLine(errorMessage);
+                    _logger.LogError(errorMessage);
                     outputMessageData = new { output = stdout, error = errorMessage };
                 }
                 else
@@ -196,7 +199,7 @@ namespace RewstRemoteAgent
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An unexpected error occurred: {e}");
+                _logger.LogError($"An unexpected error occurred: {e}");
             }
             finally
             {
@@ -233,11 +236,11 @@ namespace RewstRemoteAgent
             {
                 var response = await client.PostAsync(postUrl, content);
                 response.EnsureSuccessStatusCode();
-                Console.WriteLine($"POST request status: {response.StatusCode}");
+                _logger.LogInformation($"POST request status: {response.StatusCode}");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error posting to {postUrl}: {e}");
+                _logger.LogError($"Error posting to {postUrl}: {e}");
             }
         }
 

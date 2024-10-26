@@ -9,12 +9,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-
 namespace RewstRemoteAgent
 {
     public static class ServiceManager
     {
         private static ILogger<ServiceManager>? _logger;
+        private static string _serviceName;
 
         private static void Main(string[] args)
         {

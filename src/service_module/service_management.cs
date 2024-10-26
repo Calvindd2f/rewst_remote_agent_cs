@@ -3,15 +3,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
+using Microsoft.Extensions.Logging;
 
 namespace Rewst.RemoteAgent
 {
-    // service_management.cs
     public interface IServiceManager
     {
         private static readonly string OsType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "windows" :
                                                 RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux" :
                                                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "darwin" : "unknown";
+
+        private static readonly ILogger<IServiceManager> Logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<IServiceManager>();
 
         public static string GetServiceName(string orgId)
         {
@@ -47,18 +49,18 @@ namespace Rewst.RemoteAgent
             var serviceName = GetServiceName(orgId);
             var configFilePath = GetConfigFilePath(orgId);
 
-            Console.WriteLine($"Installing {serviceName} Service...");
+            Logger.LogInformation($"Installing {serviceName} Service...");
 
             if (IsServiceInstalled(orgId))
             {
-                Console.WriteLine("Service is already installed.");
+                Logger.LogInformation("Service is already installed.");
                 return;
             }
 
             switch (OsType)
             {
                 case "windows":
-                    Console.WriteLine($"Installing Windows Service: {serviceName}");
+                    Logger.LogInformation($"Installing Windows Service: {serviceName}");
                     var windowsServicePath = GetServiceExecutablePath(orgId);
                     Process.Start(windowsServicePath, "install").WaitForExit();
                     break;
@@ -112,7 +114,7 @@ namespace Rewst.RemoteAgent
         public static void UninstallService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
-            Console.WriteLine($"Uninstalling service {serviceName}.");
+            Logger.LogInformation($"Uninstalling service {serviceName}.");
 
             try
             {
@@ -120,7 +122,7 @@ namespace Rewst.RemoteAgent
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Unable to stop service: {e.Message}");
+                Logger.LogError($"Unable to stop service: {e.Message}");
             }
 
             switch (OsType)
@@ -132,7 +134,7 @@ namespace Rewst.RemoteAgent
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Exception removing service: {e.Message}");
+                        Logger.LogError($"Exception removing service: {e.Message}");
                     }
                     break;
 
@@ -163,11 +165,11 @@ namespace Rewst.RemoteAgent
                     try
                     {
                         using var service = new ServiceController(serviceName);
-                        Console.WriteLine($"Service status: {service.Status}");
+                        Logger.LogInformation($"Service status: {service.Status}");
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Error: {e.Message}");
+                        Logger.LogError($"Error: {e.Message}");
                     }
                     break;
 
@@ -179,11 +181,11 @@ namespace Rewst.RemoteAgent
                             RedirectStandardOutput = true,
                             UseShellExecute = false
                         });
-                        Console.WriteLine($"Service status: {process.StandardOutput.ReadToEnd().Trim()}");
+                        Logger.LogInformation($"Service status: {process.StandardOutput.ReadToEnd().Trim()}");
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Error: {e.Message}");
+                        Logger.LogError($"Error: {e.Message}");
                     }
                     break;
 
@@ -196,16 +198,16 @@ namespace Rewst.RemoteAgent
                             UseShellExecute = false
                         });
                         var output = process.StandardOutput.ReadToEnd();
-                        Console.WriteLine($"Service status: {(output.Contains(serviceName) ? "Running" : "Not Running")}");
+                        Logger.LogInformation($"Service status: {(output.Contains(serviceName) ? "Running" : "Not Running")}");
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Error: {e.Message}");
+                        Logger.LogError($"Error: {e.Message}");
                     }
                     break;
 
                 default:
-                    Console.WriteLine($"Unsupported OS type: {OsType}");
+                    Logger.LogError($"Unsupported OS type: {OsType}");
                     break;
             }
         }
@@ -213,7 +215,7 @@ namespace Rewst.RemoteAgent
         public static void StartService(string orgId)
         {
             var serviceName = GetServiceName(orgId);
-            Console.WriteLine($"Starting Service {serviceName} for {OsType}");
+            Logger.LogInformation($"Starting Service {serviceName} for {OsType}");
 
             switch (OsType)
             {
@@ -274,14 +276,8 @@ namespace Rewst.RemoteAgent
             StartService(orgId);
         }
 
-        // These methods need to be implemented based on your specific configuration logic
         private static string GetAgentExecutablePath(string orgId) => throw new NotImplementedException();
         private static string GetConfigFilePath(string orgId) => throw new NotImplementedException();
         private static string GetServiceExecutablePath(string orgId) => throw new NotImplementedException();
-    };
-
-    // rewst_service_manager.cs
-    internal class ServiceController
-    {
     }
 }

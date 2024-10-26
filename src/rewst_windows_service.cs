@@ -127,20 +127,53 @@ namespace RewstRemoteAgent
 
         private string GetOrgIdFromExecutableName()
         {
-            // Implement logic to extract org ID from executable name
-            return "";
+            var pattern = @"rewst_.*_(.+?)\.";
+            var regex = new Regex(pattern);
+            var match = regex.Match(AppDomain.CurrentDomain.FriendlyName);
+
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         private string GetAgentExecutablePath(string orgId)
         {
-            // Implement logic to get agent executable path
-            return "";
+            string executableName;
+            var osType = RuntimeInformation.OSDescription.ToLower();
+
+            switch (osType)
+            {
+                case var o when o.Contains("windows"):
+                    executableName = $"rewst_service_manager.win_{orgId}.exe";
+                    break;
+                case var o when o.Contains("linux"):
+                    executableName = $"rewst_service_manager.linux_{orgId}.bin";
+                    break;
+                case var o when o.Contains("darwin"):
+                    executableName = $"rewst_service_manager.darwin_{orgId}.nim";
+                    break;
+                default:
+                    _logger.LogError($"Unsupported OS type: {osType}. Send this output to Rewst for investigation!");
+                    Environment.Exit(1);
+                    return null;
+            }
+
+            return executableName;
         }
 
         private bool IsChecksumValid(string filePath)
         {
-            // Implement checksum validation logic
-            return true;
+            var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ChecksumVerifier>();
+            var httpClient = new HttpClient();
+            var verifier = new ChecksumVerifier(logger, httpClient);
+
+            var isValid = await verifier.IsChecksumValidAsync(filePath);
+            return isValid;
         }
 
         public static void Main()
