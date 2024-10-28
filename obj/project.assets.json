@@ -1715,17 +1715,17 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\src\\src.csproj",
+      "projectUniqueName": "c:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\src.csproj",
       "projectName": "src",
-      "projectPath": "C:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\src\\src.csproj",
+      "projectPath": "c:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\src.csproj",
       "packagesPath": "C:\\Users\\c\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\src\\obj\\",
+      "outputPath": "c:\\Users\\c\\OrchestratorAgent\\rewst_remote_agent_cs\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\c\\NuGet.Config",
+        "c:\\Users\\c\\NuGet.Config",
         "C:\\Users\\c\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
