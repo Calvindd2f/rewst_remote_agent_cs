@@ -20,14 +20,12 @@ namespace Rewst.RemoteAgent
             logger.LogInformation($"Running on {Environment.OSVersion}");
             logger.LogInformation($"Rewst Agent Configuration Tool v{GetVersion()}");
 
-            var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ChecksumVerifier>();
             var httpClient = new HttpClient();
             var verifier = new ChecksumVerifier(logger, httpClient);
 
             Logger.SetupLogging("YourAppName");
             Logger.LogInfo("This is an informational message");
             Logger.LogError("An error occurred: " + exception.Message);
-
 
             ServiceManager.InstallService("your_org_id");
 

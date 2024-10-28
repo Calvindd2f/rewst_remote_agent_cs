@@ -68,4 +68,9 @@ namespace Rewst.RemoteAgent
 
         private const string EMBED_RESOURCE_NAME = "rewst_AGENT_CONFIG_EMBED";
     }
+
+    public class AgentServiceInstallerEmbeddedConfig
+    {
+        public string TenantDomain { get; set; }
+    }
 }

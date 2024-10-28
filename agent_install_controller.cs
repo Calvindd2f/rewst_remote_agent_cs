@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.IO.Pipes;
 using Rewst.RemoteAgent.Helpers;
+using Rewst.RemoteAgent;
+using Rewst.Log;
 
 namespace Rewst.RemoteAgent
 {

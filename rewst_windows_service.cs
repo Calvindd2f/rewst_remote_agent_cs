@@ -8,9 +8,11 @@ using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Rewst.RemoteAgent.Calvindd2f;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Rewst.RemoteAgent.Service;
 
-namespace RewstRemoteAgent
+namespace Rewst.RemoteAgent
 {
     public class RewstWindowsService : ServiceBase
     {
@@ -18,10 +20,12 @@ namespace RewstRemoteAgent
         private Timer _timer;
         private string _orgId;
         private string _agentExecutablePath;
+        private ILogger<RewstWindowsService> _logger;
 
         public RewstWindowsService()
         {
             ServiceName = "RewstRemoteAgent";
+            _logger = NullLogger<RewstWindowsService>.Instance;
         }
 
         protected override void OnStart(string[] args)
@@ -145,7 +149,8 @@ namespace RewstRemoteAgent
 
         private async Task<bool> IsChecksumValid(string filePath)
         {
-            var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<ChecksumVerifier>();
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            var logger = loggerFactory.CreateLogger<ChecksumVerifier>();
             var httpClient = new HttpClient();
             var verifier = new ChecksumVerifier(logger, httpClient);
 

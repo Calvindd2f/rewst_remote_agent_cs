@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Configuration.Install;
 using Rewst.Log;
 
 namespace Rewst.RemoteAgent
